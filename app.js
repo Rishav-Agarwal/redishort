@@ -17,7 +17,7 @@ db.connect().then(() => {
 	db = db.db("redishort");
 });
 // Process port number
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 /**
  * @returns {String} A unique shortened url
@@ -151,12 +151,52 @@ function handleApiRequests(req, res) {
 
 /**
  *
+ * @param {Request} req
+ * @param {Response} res
+ *
+ * Handles the redirection requests from short url to original url
+ * If the the url is found, it redirects
+ * Otherwise, 404 error is sent
+ */
+function handleRedirect(req, res) {
+	// Get the hash
+	const hash = req.url.slice(-8);
+	console.log(hash);
+	// Try getting the orginal url
+	db.collection("urls")
+		.findOne({ hash })
+		.then((_res) => {
+			if (_res === null) {
+				// If hash not found, return 404 error page
+				return sendFile(res, "client/404.html", "text/html");
+			}
+
+			// Url found, redirect the user
+			res.statusCode = 302;
+			res.setHeader("Location", _res.url);
+			return res.end();
+		});
+}
+
+/**
+ *
  * @param {Request} req Request object
  * @param {Response} res Response object
  *
  * Everytime the server recieves a request, this function is called
  */
 function serveListener(req, res) {
+	// If request sent on http, redirect to https
+	if (
+		process.env.NODE_ENV === "production" &&
+		req.headers.referer &&
+		!req.headers.referer.startsWith("https")
+	) {
+		res.statusCode = 302;
+		res.setHeader("Location", "https://" + req.headers.host + req.url);
+		return res.end();
+	}
+
 	const url = req.url;
 
 	// Home page
@@ -165,6 +205,9 @@ function serveListener(req, res) {
 	}
 	if (url.match("/api/*")) {
 		return handleApiRequests(req, res);
+	}
+	if (url.match(/\/[a-zA-Z0-9]{8}$/)) {
+		return handleRedirect(req, res);
 	}
 }
 
