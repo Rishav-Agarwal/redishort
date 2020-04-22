@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Url shortener</title>
+	</head>
+	<body>
+		<form id="form_url_short" action="">
+			<input id="inp_url" type="url" />
+			<input type="submit" />
+		</form>
+
+		<script>
+			function begin() {
+				function shortenUrl(e) {
+					e.preventDefault();
+					fetch("/api/shorten", {
+						method: "post",
+						body: JSON.stringify({ url: inpUrl.value }),
+					}).then(console.log);
+				}
+
+				const inpUrl = document.getElementById("inp_url");
+				const formUrlShort = document.getElementById("form_url_short");
+
+				formUrlShort.addEventListener("submit", shortenUrl);
+			}
+
+			document.addEventListener("DOMContentLoaded", begin);
+		</script>
+	</body>
+</html>
