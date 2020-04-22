@@ -1,0 +1,16 @@
+{
+  "name": "redishort",
+  "version": "1.0.0",
+  "description": "Url shortener",
+  "main": "app.js",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "mongodb": "^3.5.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Rishav Agarwal",
+  "license": "ISC"
+}

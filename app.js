@@ -1,7 +1,22 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const dotenv = require("dotenv");
+const { MongoClient } = require("mongodb");
 
+/**
+ * Server configuration
+ */
+// Access environment variables
+dotenv.config();
+// Mongodb setup and connection
+const uri = process.env.SHORTEN_MONGODB_URI;
+let db = new MongoClient(uri, { useUnifiedTopology: true });
+db.connect().then(() => {
+	console.log("Connected to database");
+	db = db.db("redishort");
+});
+// Process port number
 const PORT = 3000;
 
 /**
@@ -89,15 +104,32 @@ function shortenUrl(req, res) {
 		body = JSON.parse(body);
 		// Get the url to shorten
 		const urlToShorten = body.url;
-		// Get the shortened url
-		const shortUrl = generateUniqueHash();
 
-		// Send the shortened url back to the client
-		res.writeHead(200, {
-			"Content-Type": "text/json",
-		});
-		res.write("{shortUrl: " + shortUrl + "}");
-		res.end();
+		db.collection("urls")
+			.findOne({ url: urlToShorten })
+			.then(async (res) => {
+				if (res !== null) {
+					// If the hash of the url is already present, return
+					return res.hash;
+				} else {
+					// Generate the shortened url
+					const shortUrl = generateUniqueHash();
+					// Create the url-hash entry to the database
+					await db
+						.collection("urls")
+						.insertOne({ url: urlToShorten, hash: shortUrl });
+
+					return shortUrl;
+				}
+			})
+			.then((shortUrl) => {
+				// Send the shortened url back to the client
+				res.writeHead(200, {
+					"Content-Type": "text/json",
+				});
+				res.write('{"shortUrl":"' + shortUrl + '"}');
+				res.end();
+			});
 	});
 }
 
@@ -126,15 +158,12 @@ function handleApiRequests(req, res) {
  */
 function serveListener(req, res) {
 	const url = req.url;
-	console.log(url);
 
 	// Home page
 	if (url === "/") {
-		console.log("Hit: /");
 		return homepage(req, res);
 	}
 	if (url.match("/api/*")) {
-		console.log("Hit: /api");
 		return handleApiRequests(req, res);
 	}
 }

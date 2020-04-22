@@ -13,10 +13,25 @@
 			function begin() {
 				function shortenUrl(e) {
 					e.preventDefault();
+
+					// Get the short url for the input url
 					fetch("/api/shorten", {
 						method: "post",
 						body: JSON.stringify({ url: inpUrl.value }),
-					}).then(console.log);
+					})
+						.then((res) => res.json())
+						.then((hash) => {
+							// generate the shortened url
+							const hashUrl = window.location.host + "/" + hash.shortUrl;
+
+							// Append the short url into the page
+							const urlElement = document.createElement("h4");
+							urlElement.innerHTML = `<h4>URL: <a href="${inpUrl.value}" target="_blank">${inpUrl.value}</a></h4><h4>Your shortened url is <a href="${hashUrl}" target="_blank">${hashUrl}</a></h4>`;
+							document.body.appendChild(urlElement);
+
+							// Clear the input
+							inpUrl.value = "";
+						});
 				}
 
 				const inpUrl = document.getElementById("inp_url");
