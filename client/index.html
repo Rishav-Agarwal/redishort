@@ -9,8 +9,14 @@
 			<input type="submit" />
 		</form>
 
+		<div id="result" />
+
 		<script>
 			function begin() {
+				const inpUrl = document.getElementById("inp_url");
+				const formUrlShort = document.getElementById("form_url_short");
+				const divResult = document.getElementById("result");
+
 				function shortenUrl(e) {
 					e.preventDefault();
 
@@ -22,20 +28,17 @@
 						.then((res) => res.json())
 						.then((hash) => {
 							// generate the shortened url
-							const hashUrl = window.location.host + "/" + hash.shortUrl;
+							const hashUrl =
+								"https://" + window.location.host + "/" + hash.shortUrl;
 
 							// Append the short url into the page
-							const urlElement = document.createElement("h4");
-							urlElement.innerHTML = `<h4>URL: <a href="${inpUrl.value}" target="_blank">${inpUrl.value}</a></h4><h4>Your shortened url is <a href="${hashUrl}" target="_blank">${hashUrl}</a></h4>`;
-							document.body.appendChild(urlElement);
+							const resultHtml = `<h4>URL: <a href="${inpUrl.value}" target="_blank">${inpUrl.value}</a></h4><h4>Your shortened url is <a href="${hashUrl}" target="_blank">${hashUrl}</a></h4>`;
+							divResult.innerHTML = resultHtml;
 
 							// Clear the input
 							inpUrl.value = "";
 						});
 				}
-
-				const inpUrl = document.getElementById("inp_url");
-				const formUrlShort = document.getElementById("form_url_short");
 
 				formUrlShort.addEventListener("submit", shortenUrl);
 			}
