@@ -2,14 +2,65 @@
 <html>
 	<head>
 		<title>Url shortener</title>
+		<link rel="icon" type="image/png" href="https://i.imgur.com/P5A06kx.png" />
+
+		<style type="text/css">
+			body {
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+			}
+
+			div.card-panel {
+				margin-top: 16px;
+			}
+
+			form {
+				padding: 16px;
+			}
+		</style>
+
+		<!--Import Google Icon Font-->
+		<link
+			href="https://fonts.googleapis.com/icon?family=Material+Icons"
+			rel="stylesheet"
+		/>
+		<!-- Compiled and minified CSS -->
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+		/>
+		<!--Let browser know website is optimized for mobile-->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	</head>
 	<body>
-		<form id="form_url_short" action="">
-			<input id="inp_url" type="url" />
-			<input type="submit" />
-		</form>
+		<div class="container">
+			<div class="row">
+				<div class="col s12 offset-m2 m8 offset-l3 l6 card-panel hoverable">
+					<form id="form_url_short" action="">
+						<div style="padding-bottom: 8px;">
+							<h5>
+								<i class="material-icons">short_text</i> Redishort url shortener
+							</h5>
+						</div>
+						<div class="input-field">
+							<i class="material-icons prefix">link</i>
+							<input type="url" id="inp_url" />
+							<label for="inp_url">Long url</label>
+						</div>
+						<div class="right-align">
+							<button class="btn-small waves-effect waves-light" type="submit">
+								Shorten
+								<i class="material-icons right">send</i>
+							</button>
+						</div>
 
-		<div id="result" />
+						<div id="result" />
+					</form>
+				</div>
+			</div>
+		</div>
 
 		<script>
 			function begin() {
@@ -20,10 +71,13 @@
 				function shortenUrl(e) {
 					e.preventDefault();
 
+					const url = inpUrl.value;
+					if (url == undefined || url == null || url === "") return;
+
 					// Get the short url for the input url
 					fetch("/api/shorten", {
 						method: "post",
-						body: JSON.stringify({ url: inpUrl.value }),
+						body: JSON.stringify({ url }),
 					})
 						.then((res) => res.json())
 						.then((hash) => {
@@ -32,7 +86,7 @@
 								"https://" + window.location.host + "/" + hash.shortUrl;
 
 							// Append the short url into the page
-							const resultHtml = `<h4>URL: <a href="${inpUrl.value}" target="_blank">${inpUrl.value}</a></h4><h4>Your shortened url is <a href="${hashUrl}" target="_blank">${hashUrl}</a></h4>`;
+							const resultHtml = `<h6 class="truncate">Long url: <a href="${inpUrl.value}" target="_blank">${inpUrl.value}</a></h6><h6>Short url: <a href="${hashUrl}" target="_blank">${hashUrl}</a></h6>`;
 							divResult.innerHTML = resultHtml;
 
 							// Clear the input
@@ -45,5 +99,8 @@
 
 			document.addEventListener("DOMContentLoaded", begin);
 		</script>
+
+		<!-- Compiled and minified JavaScript -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 	</body>
 </html>
