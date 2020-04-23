@@ -186,13 +186,6 @@ function handleRedirect(req, res) {
  * Everytime the server recieves a request, this function is called
  */
 function serveListener(req, res) {
-	// If request sent on http, redirect to https
-	if (process.env.NODE_ENV === "production" && !req.connection.encrypted) {
-		res.statusCode = 302;
-		res.setHeader("Location", "https://" + req.headers.host + req.url);
-		return res.end();
-	}
-
 	const headers = {
 		"Access-Control-Allow-Origin": "*",
 		"Access-Control-Allow-Headers": "X-Requested-With",
