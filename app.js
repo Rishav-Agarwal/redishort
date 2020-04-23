@@ -187,11 +187,7 @@ function handleRedirect(req, res) {
  */
 function serveListener(req, res) {
 	// If request sent on http, redirect to https
-	if (
-		process.env.NODE_ENV === "production" &&
-		req.headers.referer &&
-		!req.headers.referer.startsWith("https")
-	) {
+	if (process.env.NODE_ENV === "production" && !req.connection.encrypted) {
 		res.statusCode = 302;
 		res.setHeader("Location", "https://" + req.headers.host + req.url);
 		return res.end();
