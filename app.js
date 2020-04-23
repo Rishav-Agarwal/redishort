@@ -68,8 +68,6 @@ function sendFile(res, filePath, type) {
 	res.writeHead(200, {
 		"Content-Type": type,
 		"Content-Length": stat.size,
-		"Access-Control-Allow-Origin": "*",
-		"Access-Control-Allow-Headers": "*",
 	});
 
 	const readStream = fs.createReadStream(_path);
@@ -128,8 +126,6 @@ function shortenUrl(req, res) {
 				// Send the shortened url back to the client
 				res.writeHead(200, {
 					"Content-Type": "text/json",
-					"Access-Control-Allow-Origin": "*",
-					"Access-Control-Allow-Headers": "*",
 				});
 				res.write('{"shortUrl":"' + shortUrl + '"}');
 				res.end();
@@ -198,6 +194,18 @@ function serveListener(req, res) {
 	) {
 		res.statusCode = 302;
 		res.setHeader("Location", "https://" + req.headers.host + req.url);
+		return res.end();
+	}
+
+	const headers = {
+		"Access-Control-Allow-Origin": "*",
+		"Access-Control-Allow-Methods": "OPTIONS, POST, GET",
+		"Access-Control-Max-Age": 2592000, // 30 days
+		/** add other headers as per requirement */
+	};
+
+	if (req.method === "OPTIONS") {
+		res.writeHead(204, headers);
 		return res.end();
 	}
 
