@@ -68,6 +68,9 @@ function sendFile(res, filePath, type) {
 	res.writeHead(200, {
 		"Content-Type": type,
 		"Content-Length": stat.size,
+		"Access-Control-Allow-Origin": "*",
+		"Access-Control-Allow-Headers":
+			"Origin, X-Requested-With, Content-Type, Accept",
 	});
 
 	const readStream = fs.createReadStream(_path);
@@ -126,6 +129,9 @@ function shortenUrl(req, res) {
 				// Send the shortened url back to the client
 				res.writeHead(200, {
 					"Content-Type": "text/json",
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Headers":
+						"Origin, X-Requested-With, Content-Type, Accept",
 				});
 				res.write('{"shortUrl":"' + shortUrl + '"}');
 				res.end();
