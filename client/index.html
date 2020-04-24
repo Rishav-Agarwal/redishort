@@ -188,7 +188,11 @@
 							// Generate the html to display the top urls
 							let topResult = "<ul>";
 							hashes.forEach((item) => {
-								topResult += `<li><h6><a href="${window.location.host}/${item}" target="_blank">${window.location.host}/${item}</a></h6></li>`;
+								topResult += `<li><h6><a href="${
+									"https://" + window.location.host
+								}/${item}" target="_blank">${
+									window.location.host
+								}/${item}</a></h6></li>`;
 							});
 							topResult += "</li>";
 
@@ -227,7 +231,9 @@
 							// Hide the progress bar
 							shortLoad.classList.add("hide");
 							// Append the short url into the page
-							const resultHtml = `<h6 class="truncate">Long url: <a href="${url}" target="_blank">${url}</a></h6><h6>Short url: <a href="${hashUrl}" target="_blank">${hashUrl}</a></h6>`;
+							const resultHtml = `<h6 class="truncate">Long url: <a href="${url}" target="_blank">${url}</a></h6><h6>Short url: <a href="${
+								"https://" + hashUrl
+							}" target="_blank">${hashUrl}</a></h6>`;
 							divResult.innerHTML = resultHtml;
 
 							// Clear the input
