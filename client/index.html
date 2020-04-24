@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Url shortener</title>
+		<title>Redishort</title>
 		<link rel="icon" type="image/png" href="https://i.imgur.com/P5A06kx.png" />
 
 		<style type="text/css">
@@ -56,6 +56,9 @@
 							</button>
 						</div>
 
+						<div id="loading-short" class="progress hide">
+							<div class="indeterminate"></div>
+						</div>
 						<div id="result" />
 					</form>
 				</div>
@@ -67,12 +70,16 @@
 				const inpUrl = document.getElementById("inp_url");
 				const formUrlShort = document.getElementById("form_url_short");
 				const divResult = document.getElementById("result");
+				const shortLoad = document.getElementById("loading-short");
 
 				function shortenUrl(e) {
 					e.preventDefault();
 
 					const url = inpUrl.value;
 					if (url == undefined || url == null || url === "") return;
+
+					divResult.innerHTML = "";
+					shortLoad.classList.remove("hide");
 
 					// Get the short url for the input url
 					fetch("/api/shorten", {
@@ -82,11 +89,14 @@
 						.then((res) => res.json())
 						.then((hash) => {
 							// generate the shortened url
-							const hashUrl =
-								"https://" + window.location.host + "/" + hash.shortUrl;
+							let hashUrl = url;
+							if (hash.shortUrl !== "*")
+								hashUrl =
+									"https://" + window.location.host + "/" + hash.shortUrl;
 
+							shortLoad.classList.add("hide");
 							// Append the short url into the page
-							const resultHtml = `<h6 class="truncate">Long url: <a href="${inpUrl.value}" target="_blank">${inpUrl.value}</a></h6><h6>Short url: <a href="${hashUrl}" target="_blank">${hashUrl}</a></h6>`;
+							const resultHtml = `<h6 class="truncate">Long url: <a href="${url}" target="_blank">${url}</a></h6><h6>Short url: <a href="${hashUrl}" target="_blank">${hashUrl}</a></h6>`;
 							divResult.innerHTML = resultHtml;
 
 							// Clear the input

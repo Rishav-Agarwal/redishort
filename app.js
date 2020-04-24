@@ -105,6 +105,19 @@ function shortenUrl(req, res) {
 		// Get the url to shorten
 		const urlToShorten = body.url;
 
+		// If the requested url is already small (smaller than what we can produce), return the original url
+		const host = "https://" + req.headers.host + "/";
+		const genL = host.length + 8;
+		if (urlToShorten.length <= genL) {
+			// Send the shortened url back to the client
+			res.writeHead(200, {
+				"Content-Type": "text/json",
+			});
+			res.write('{"shortUrl":"*"}');
+			return res.end();
+		}
+
+		// We can produce smaller url, continue
 		db.collection("urls")
 			.findOne({ url: urlToShorten })
 			.then(async (res) => {
@@ -160,8 +173,7 @@ function handleApiRequests(req, res) {
  */
 function handleRedirect(req, res) {
 	// Get the hash
-	const hash = req.url.slice(-8);
-	console.log(hash);
+	const hash = req.url.slice(1);
 	// Try getting the orginal url
 	db.collection("urls")
 		.findOne({ hash })
@@ -192,12 +204,16 @@ function serveListener(req, res) {
 	if (url === "/") {
 		return homepage(req, res);
 	}
-	if (url.match("/api/*")) {
+	// Starts with /api/
+	if (url.match(/^\/api\//)) {
 		return handleApiRequests(req, res);
 	}
-	if (url.match(/\/[a-zA-Z0-9]{8}$/)) {
+	// Starts with /____ (short url)
+	if (url.match(/^\/[a-zA-Z0-9]{4,16}$/)) {
 		return handleRedirect(req, res);
 	}
+	// Invalid request, send 404
+	sendFile(res, "client/404.html", "text/html");
 }
 
 // Create the server and listen for incoming requests
