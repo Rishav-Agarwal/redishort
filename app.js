@@ -147,6 +147,31 @@ function shortenUrl(req, res) {
 }
 
 /**
+ * @param {Request} req
+ * @param {Response} res
+ *
+ * Returns the top 5 short urls that have been used
+ */
+function getTopRedishorts(req, res) {
+	db.collection("urls")
+		.find()
+		.limit(5)
+		.project({ _id: 0, hash: 1 })
+		.sort({ visits: -1 })
+		.toArray((err, docs) => {
+			if (err) return;
+
+			// Send the shortened url back to the client
+			res.writeHead(200, {
+				"Content-Type": "text/json",
+			});
+			const topRedishorts = docs.map((item) => item.hash);
+			res.write(topRedishorts.toString());
+			res.end();
+		});
+}
+
+/**
  *
  * @param {Request} req
  * @param {Response} res
@@ -159,6 +184,9 @@ function handleApiRequests(req, res) {
 	// Handle request received for shortening url
 	if (url === "/api/shorten" && req.method === "POST") {
 		return shortenUrl(req, res);
+	}
+	if (url === "/api/top-redishorts" && req.method === "GET") {
+		return getTopRedishorts(req, res);
 	}
 }
 
@@ -180,13 +208,20 @@ function handleRedirect(req, res) {
 		.then((_res) => {
 			if (_res === null) {
 				// If hash not found, return 404 error page
-				return sendFile(res, "client/404.html", "text/html");
+				sendFile(res, "client/404.html", "text/html");
+				return null;
 			}
 
 			// Url found, redirect the user
 			res.statusCode = 302;
 			res.setHeader("Location", _res.url);
-			return res.end();
+			res.end();
+			return _res.url;
+		})
+		.then((url) => {
+			return db
+				.collection("urls")
+				.findOneAndUpdate({ url }, { $inc: { visits: 1 } });
 		});
 }
 

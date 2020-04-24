@@ -29,6 +29,10 @@
 			form {
 				padding: 16px;
 			}
+
+			.top-redishorts {
+				padding: 16px;
+			}
 		</style>
 
 		<!--Import Google Icon Font-->
@@ -78,8 +82,24 @@
 						</form>
 					</div>
 				</div>
+
+				<div class="row">
+					<div class="col s12 offset-m2 m8 offset-l3 l6 card-panel hoverable">
+						<div class="top-redishorts">
+							<div style="padding-bottom: 8px;">
+								<h5><i class="material-icons">thumb_up</i> Top redishorts</h5>
+							</div>
+
+							<div id="loading-top-short" class="progress">
+								<div class="indeterminate"></div>
+							</div>
+							<div id="result_top-redishorts" />
+						</div>
+					</div>
+				</div>
 			</div>
 		</main>
+
 		<footer class="page-footer">
 			<div class="container">
 				<div class="row">
@@ -154,14 +174,42 @@
 				const formUrlShort = document.getElementById("form_url_short");
 				const divResult = document.getElementById("result");
 				const shortLoad = document.getElementById("loading-short");
+				const topShortLoad = document.getElementById("loading-top-short");
+				const resultTopRedis = document.getElementById("result_top-redishorts");
 
+				// Load and display the top 5 opened short urls
+				function getTopRedis() {
+					fetch("/api/top-redishorts")
+						.then((res) => res.text())
+						.then((hashes) => {
+							// Get the hashes in an array
+							hashes = hashes.split(",");
+
+							// Generate the html to display the top urls
+							let topResult = "<ul>";
+							hashes.forEach((item) => {
+								topResult += `<li><h6><a href="${window.location.host}/${item}" target="_blank">${window.location.host}/${item}</a></h6></li>`;
+							});
+							topResult += "</li>";
+
+							// Hide the progress bar
+							topShortLoad.classList.add("hide");
+							// Display top 5 urls
+							resultTopRedis.innerHTML = topResult;
+						});
+				}
+
+				// Get the short url for the input url and display both
 				function shortenUrl(e) {
 					e.preventDefault();
 
+					// Requested url
 					const url = inpUrl.value;
 					if (url == undefined || url == null || url === "") return;
 
+					// Remomve previous results if any
 					divResult.innerHTML = "";
+					// Show the progress bar
 					shortLoad.classList.remove("hide");
 
 					// Get the short url for the input url
@@ -176,6 +224,7 @@
 							if (hash.shortUrl !== "*")
 								hashUrl = window.location.host + "/" + hash.shortUrl;
 
+							// Hide the progress bar
 							shortLoad.classList.add("hide");
 							// Append the short url into the page
 							const resultHtml = `<h6 class="truncate">Long url: <a href="${url}" target="_blank">${url}</a></h6><h6>Short url: <a href="${hashUrl}" target="_blank">${hashUrl}</a></h6>`;
@@ -186,7 +235,10 @@
 						});
 				}
 
+				// Listern for user request to shorten ur;
 				formUrlShort.addEventListener("submit", shortenUrl);
+				// Get top 5 visited short urls
+				getTopRedis();
 			}
 
 			document.addEventListener("DOMContentLoaded", begin);
