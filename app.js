@@ -19,6 +19,9 @@ db.connect().then(() => {
 // Process port number
 const PORT = process.env.PORT || 3000;
 
+// This will be appended as the last digit
+let counter = 0;
+
 /**
  * @returns {String} A unique shortened url
  *
@@ -26,7 +29,7 @@ const PORT = process.env.PORT || 3000;
  *
  * Converts the current time in millis to a 62-base number (containg alphanumeric characters).
  * This gives us a 7-digit string.
- * It then appends a random digit at the end.
+ * Append a counter digit at the end.
  */
 function generateUniqueHash() {
 	// Get the current time in millis
@@ -36,7 +39,7 @@ function generateUniqueHash() {
 	const hex_chars =
 		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-	// This store the generated url hash
+	// This stores the generated url hash
 	let time_hex = "";
 
 	// Convert the current time into a 62-base number to get a unique hash
@@ -46,9 +49,9 @@ function generateUniqueHash() {
 		_time = Math.floor(_time / 62);
 	}
 
-	// Extra random digit at the end
-	const last = Math.floor(Math.random() * 62);
-	time_hex += hex_chars[last];
+	// Add counter digit at the end
+	time_hex += hex_chars[counter];
+	counter = (counter + 1) % 62;
 
 	return time_hex;
 }
