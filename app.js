@@ -2,7 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
-const MultiMap = require("mnemonist/multi-map");
+const TreeMap = require("treemap-js");
 const { MongoClient } = require("mongodb");
 
 /**
@@ -25,7 +25,7 @@ let counter = 0;
 
 // Cache short urls
 const cacheMap = {};
-const cache = new MultiMap(Set);
+const cache = new TreeMap();
 const CACHE_LIMIT = 100000;
 
 /**
@@ -161,25 +161,32 @@ function shortenUrl(req, res) {
  * @param {Request} req
  * @param {Response} res
  *
- * Returns the top 5 short urls that have been used
+ * Returns the top 5 short urls from the cache that have been used
  */
 function getTopRedishorts(req, res) {
-	db.collection("urls")
-		.find()
-		.limit(5)
-		.project({ _id: 0, hash: 1 })
-		.sort({ visits: -1 })
-		.toArray((err, docs) => {
-			if (err) return;
+	const docs = [];
 
-			// Send the shortened url back to the client
-			res.writeHead(200, {
-				"Content-Type": "text/json",
-			});
-			const topRedishorts = docs.map((item) => item.hash);
-			res.write(topRedishorts.toString());
-			res.end();
+	// Get 5 urls with best values
+	for (let i = 1; i <= 5 && cache.getLength() > 0; ++i) {
+		const curKey = cache.getMaxKey();
+		docs.push({
+			key: curKey,
+			val: cache.get(curKey),
 		});
+		cache.remove(curKey);
+	}
+	// Push them back to the cache as we removed while reading
+	for (cacheItem of docs) {
+		cache.set(cacheItem.key, cacheItem.val);
+	}
+
+	// Send the top redishorts back to the client
+	res.writeHead(200, {
+		"Content-Type": "text/json",
+	});
+	const topRedishorts = docs.map((item) => item.val);
+	res.write(topRedishorts.toString());
+	res.end();
 }
 
 /**
@@ -221,9 +228,6 @@ function handleRedirect(req, res) {
 	 */
 
 	if (cacheMap[hash]) {
-		// Cache hit!
-		console.log("Cache hit for " + cacheMap[hash].url);
-
 		// Send the data back to the user
 		res.statusCode = 302;
 		res.setHeader("Location", cacheMap[hash].url);
@@ -233,7 +237,7 @@ function handleRedirect(req, res) {
 
 		// Get the old value for current url and delete it from the cache to update
 		const oldVal = cacheMap[hash].value;
-		cache.delete(oldVal);
+		cache.remove(oldVal);
 
 		// Create new document, update visits, last visit and its value and update the cache
 		const newDoc = { ...cacheMap[hash] };
@@ -283,16 +287,16 @@ function handleRedirect(req, res) {
 				(newNode.lastVisit - newNode.createdAt);
 
 			// If we have enough space in cache, push to the cache directly
-			if (cache.size < CACHE_LIMIT) {
+			if (cache.getLength() < CACHE_LIMIT) {
 				cache.set(newNode.value, newNode.hash);
 				cacheMap[newNode.hash] = newNode;
 			} else {
 				// Otherwise, comapare its value with the smallest value and cache
 				// If lesser, continue else pop the element with least value and push current one
-				const leastEle = cache.entries().next().value;
-				if (newNode.value > leastEle[0]) {
+				const leastEle = cache.getMinKey();
+				if (newNode.value > leastEle) {
 					delete cacheMap[leastEle[1][hash]];
-					cache.delete(leastEle[0]);
+					cache.remove(leastEle[0]);
 					cacheMap[newNode.hash] = newNode;
 					cache.set(newNode.value, newNode.hash);
 				}
