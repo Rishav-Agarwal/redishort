@@ -220,6 +220,9 @@
 					fetch("/api/shorten", {
 						method: "post",
 						body: JSON.stringify({ url }),
+						headers: {
+							"Content-Type": "application/json",
+						},
 					})
 						.then((res) => res.json())
 						.then((hash) => {

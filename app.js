@@ -1,8 +1,8 @@
-const http = require("http");
-const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 const TreeMap = require("treemap-js");
+const app = require("express")();
+const bodyParser = require("body-parser");
 const { MongoClient } = require("mongodb");
 
 /**
@@ -27,6 +27,11 @@ let counter = 0;
 const cacheMap = {};
 const cache = new TreeMap();
 const CACHE_LIMIT = 100000;
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(bodyParser.text());
+app.use(bodyParser.raw());
 
 /**
  * @returns {String} A unique shortened url
@@ -63,37 +68,16 @@ function generateUniqueHash() {
 }
 
 /**
- *
- * @param {Response} res The response object
- * @param {String} filePath The path of the file to send
- * @param {String} type Type of file
- *
- * Sends the file present in the specified path as the response back to the client.
- */
-function sendFile(res, filePath, type) {
-	const _path = path.join(__dirname, filePath);
-	const stat = fs.statSync(_path);
-
-	res.writeHead(200, {
-		"Content-Type": type,
-		"Content-Length": stat.size,
-	});
-
-	const readStream = fs.createReadStream(_path);
-	readStream.pipe(res);
-}
-
-/**
- *
  * @param {Request} req
  * @param {Response} res
  *
  * This function handles requests at homepage ie,'/'
  * It returns the `index.html` file
  */
-function homepage(req, res) {
-	sendFile(res, "client/index.html", "text/html");
-}
+app.get("/", (req, res) => {
+	const filePath = "client/index.html";
+	res.sendFile(path.join(__dirname, filePath));
+});
 
 /**
  *
@@ -102,60 +86,45 @@ function homepage(req, res) {
  *
  * Handles the url shortening requests
  */
-function shortenUrl(req, res) {
-	let body = [];
-	// Read data in chunks and append to an array
-	req.on("data", (chunk) => {
-		body.push(chunk);
-	});
-	req.on("end", () => {
-		// Get the request body in JSON format
-		body = JSON.parse(body);
-		// Get the url to shorten
-		const urlToShorten = body.url;
+app.post("/api/shorten", (req, res) => {
+	// Get the request body in JSON format
+	body = req.body;
+	// Get the url to shorten
+	const urlToShorten = body.url;
 
-		// If the requested url is already small (smaller than what we can produce), return the original url
-		const host = "https://" + req.headers.host + "/";
-		const genL = host.length + 8;
-		if (urlToShorten.length <= genL) {
-			// Send the shortened url back to the client
-			res.writeHead(200, {
-				"Content-Type": "text/json",
-			});
-			res.write('{"shortUrl":"*"}');
-			return res.end();
-		}
+	// If the requested url is already small (smaller than what we can produce), return the original url
+	const host = "https://" + req.headers.host + "/";
+	const genL = host.length + 8;
+	if (urlToShorten.length <= genL) {
+		// Send the shortened url back to the client
+		return res.json({ shortUrl: "*" });
+	}
 
-		// We can produce smaller url, continue
-		db.collection("urls")
-			.findOne({ url: urlToShorten })
-			.then(async (res) => {
-				if (res !== null) {
-					// If the hash of the url is already present, return
-					return res.hash;
-				} else {
-					// Generate the shortened url
-					const shortUrl = generateUniqueHash();
-					// Create the url-hash entry to the database
-					await db.collection("urls").insertOne({
-						url: urlToShorten,
-						hash: shortUrl,
-						createdAt: Date.now(),
-					});
-
-					return shortUrl;
-				}
-			})
-			.then((shortUrl) => {
-				// Send the shortened url back to the client
-				res.writeHead(200, {
-					"Content-Type": "text/json",
+	// We can produce smaller url, continue
+	db.collection("urls")
+		.findOne({ url: urlToShorten })
+		.then(async (res) => {
+			if (res !== null) {
+				// If the hash of the url is already present, return
+				return res.hash;
+			} else {
+				// Generate the shortened url
+				const shortUrl = generateUniqueHash();
+				// Create the url-hash entry to the database
+				await db.collection("urls").insertOne({
+					url: urlToShorten,
+					hash: shortUrl,
+					createdAt: Date.now(),
 				});
-				res.write('{"shortUrl":"' + shortUrl + '"}');
-				res.end();
-			});
-	});
-}
+
+				return shortUrl;
+			}
+		})
+		.then((shortUrl) => {
+			// Send the shortened url back to the client
+			res.json({ shortUrl });
+		});
+});
 
 /**
  * @param {Request} req
@@ -163,7 +132,7 @@ function shortenUrl(req, res) {
  *
  * Returns the top 5 short urls from the cache that have been used
  */
-function getTopRedishorts(req, res) {
+app.get("/api/top-redishorts", (req, res) => {
 	const docs = [];
 
 	// Get 5 urls with best values
@@ -181,32 +150,9 @@ function getTopRedishorts(req, res) {
 	}
 
 	// Send the top redishorts back to the client
-	res.writeHead(200, {
-		"Content-Type": "text/json",
-	});
 	const topRedishorts = docs.map((item) => item.val);
-	res.write(topRedishorts.toString());
-	res.end();
-}
-
-/**
- *
- * @param {Request} req
- * @param {Response} res
- *
- * Handle all the requests made to our API
- */
-function handleApiRequests(req, res) {
-	const url = req.url;
-
-	// Handle request received for shortening url
-	if (url === "/api/shorten" && req.method === "POST") {
-		return shortenUrl(req, res);
-	}
-	if (url === "/api/top-redishorts" && req.method === "GET") {
-		return getTopRedishorts(req, res);
-	}
-}
+	res.send(topRedishorts.toString());
+});
 
 /**
  *
@@ -217,7 +163,7 @@ function handleApiRequests(req, res) {
  * If the the url is found, it redirects
  * Otherwise, 404 error is sent
  */
-function handleRedirect(req, res) {
+app.get(/^\/[a-zA-Z0-9]{4,16}$/, (req, res) => {
 	// Get the hash
 	const hash = req.url.slice(1);
 
@@ -229,9 +175,7 @@ function handleRedirect(req, res) {
 
 	if (cacheMap[hash]) {
 		// Send the data back to the user
-		res.statusCode = 302;
-		res.setHeader("Location", cacheMap[hash].url);
-		res.end();
+		res.redirect(cacheMap[hash].url);
 
 		// Update the cache with visits, last visit and the new value for the url
 
@@ -265,14 +209,13 @@ function handleRedirect(req, res) {
 		.then((_res) => {
 			if (_res === null) {
 				// If hash not found, return 404 error page
-				sendFile(res, "client/404.html", "text/html");
+				const filePath = "client/404.html";
+				res.sendFile(path.join(__dirname, filePath));
 				return null;
 			}
 
 			// Url found, redirect the user
-			res.statusCode = 302;
-			res.setHeader("Location", _res.url);
-			res.end();
+			res.redirect(_res.url);
 			return _res;
 		})
 		.then((_res) => {
@@ -307,7 +250,7 @@ function handleRedirect(req, res) {
 				.collection("urls")
 				.findOneAndUpdate({ url: _res.url }, { $inc: { visits: 1 } });
 		});
-}
+});
 
 /**
  *
@@ -316,25 +259,11 @@ function handleRedirect(req, res) {
  *
  * Everytime the server recieves a request, this function is called
  */
-function serveListener(req, res) {
-	const url = req.url;
-
-	// Home page
-	if (url === "/") {
-		return homepage(req, res);
-	}
-	// Starts with /api/
-	if (url.match(/^\/api\//)) {
-		return handleApiRequests(req, res);
-	}
-	// Starts with /____ (short url)
-	if (url.match(/^\/[a-zA-Z0-9]{4,16}$/)) {
-		return handleRedirect(req, res);
-	}
+app.use((req, res) => {
 	// Invalid request, send 404
-	sendFile(res, "client/404.html", "text/html");
-}
+	const filePath = "client/404.html";
+	res.sendFile(path.join(__dirname, filePath));
+});
 
 // Create the server and listen for incoming requests
-const server = http.createServer(serveListener);
-server.listen(PORT, () => console.log("Listening at port " + PORT));
+app.listen(PORT, () => console.log("Listening at port " + PORT));
