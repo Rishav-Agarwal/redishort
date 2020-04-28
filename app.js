@@ -44,11 +44,37 @@ cache = new TreeMap();
 CACHE_LIMIT = 100000;
 
 const app = express();
+
+if (process.env.NODE_ENV === "production") {
+	/*
+	 * Redirect user to https if requested on http
+	 *
+	 * Refer this for explaination:
+	 * https://www.tonyerwin.com/2014/09/redirecting-http-to-https-with-nodejs.html
+	 */
+	app.enable("trust proxy");
+	app.use((req, res, next) => {
+		// console.log('secure check');
+		if (req.secure) {
+			// console.log('secure');
+			// request was via https, so do no special handling
+			next();
+		} else {
+			//
+			// request was via http, so redirect to https
+			res.redirect(`https://${req.headers.host}${req.url}`);
+		}
+	});
+}
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(bodyParser.text());
 app.use(bodyParser.raw());
-app.use(express.static(path.join(rootDir, "client")));
+
+app.use("/api", apiRoutes);
+
+app.use(redirectionRoutes);
 
 /**
  * @param {Request} req
@@ -61,9 +87,8 @@ app.get("/", (req, res) => {
 	res.sendFile(path.join(rootDir, "client", "index.html"));
 });
 
-app.use("/api", apiRoutes);
-
-app.use(redirectionRoutes);
+// Serve static files
+app.use(express.static(path.join(rootDir, "client")));
 
 /**
  *
