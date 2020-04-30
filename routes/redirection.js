@@ -15,7 +15,6 @@ const rootDir = require("../util/path");
 router.get(/^\/[a-zA-Z0-9]{4,16}$/, (req, res) => {
 	// Get the hash
 	const hash = req.url.slice(1);
-
 	/**
 	 * Check the cache
 	 * If cache hits, return from the cache and update the db for visit count
@@ -23,6 +22,11 @@ router.get(/^\/[a-zA-Z0-9]{4,16}$/, (req, res) => {
 	 */
 
 	if (cacheMap[hash]) {
+		++cache_total;
+		++cache_hit;
+		console.log("Total req: " + cache_total);
+		console.log("Total hit: " + cache_hit);
+		console.log("Hit ratio: " + cache_hit / cache_total);
 		// Send the data back to the user
 		res.redirect(cacheMap[hash].url);
 
@@ -70,6 +74,10 @@ router.get(/^\/[a-zA-Z0-9]{4,16}$/, (req, res) => {
 			if (_res === null) return;
 
 			// Got the url from database. Check if can be pushed to the cache
+			++cache_total;
+			console.log("Total req: " + cache_total);
+			console.log("Total hit: " + cache_hit);
+			console.log("Hit ratio: " + cache_hit / cache_total);
 
 			// Create a node for the current url
 			const newNode = { ..._res };
@@ -88,8 +96,8 @@ router.get(/^\/[a-zA-Z0-9]{4,16}$/, (req, res) => {
 				// If lesser, continue else pop the element with least value and push current one
 				const leastEle = cache.getMinKey();
 				if (newNode.value > leastEle) {
-					delete cacheMap[leastEle[1][hash]];
-					cache.remove(leastEle[0]);
+					delete cacheMap[cache.get(leastEle)];
+					cache.remove(leastEle);
 					cacheMap[newNode.hash] = newNode;
 					cache.set(newNode.value, newNode.hash);
 				}

@@ -33,7 +33,7 @@ db.connect().then(() => {
 const PORT = process.env.PORT || 3000;
 
 // This will be appended as the last digit
-let counter = 0;
+counter = 0;
 
 // Cache short urls
 /**
@@ -42,6 +42,8 @@ let counter = 0;
 cacheMap = {};
 cache = new TreeMap();
 CACHE_LIMIT = 100000;
+cache_total = 0;
+cache_hit = 0;
 
 const app = express();
 
