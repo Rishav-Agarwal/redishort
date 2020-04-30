@@ -24,10 +24,6 @@ const uri = process.env.SHORTEN_MONGODB_URI;
  * `db` is a GLOBAL variable
  */
 db = new MongoClient(uri, { useUnifiedTopology: true });
-db.connect().then(() => {
-	console.log("Connected to database");
-	db = db.db("redishort");
-});
 
 // Process port number
 const PORT = process.env.PORT || 3000;
@@ -67,6 +63,11 @@ if (process.env.NODE_ENV === "production") {
 			res.redirect(`https://${req.headers.host}${req.url}`);
 		}
 	});
+
+	// Heroku free account sleeps after 30 mins of inacivity
+	// To prevent sleeping, call a dummy function every 29 mins
+	// Should be removed when upgrading to paid account using a different service
+	setInterval(() => console.log("Prevent sleep"), 29 * 60 * 1000);
 }
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -104,5 +105,9 @@ app.use((req, res) => {
 	res.status(404).sendFile(path.join(rootDir, "client", "404.html"));
 });
 
-// Create the server and listen for incoming requests
-app.listen(PORT, () => console.log("Listening at port " + PORT));
+// Connect to the database, create the server and listen for incoming requests
+db.connect().then(() => {
+	console.log("Connected to database");
+	db = db.db("redishort");
+	app.listen(PORT, () => console.log("Listening at port " + PORT));
+});
